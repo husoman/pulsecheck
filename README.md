@@ -2,7 +2,7 @@
 
 A tiny uptime monitor for solo devs and side projects. Add a URL, it gets checked once a day, and you get emailed the moment it stops responding.
 
-**Live demo →** *(add your Vercel URL here after deploying)*
+**[Live demo](https://pulsecheck-silk-sigma.vercel.app/)**
 
 ## What it does
 
