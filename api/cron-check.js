@@ -46,6 +46,10 @@ export default async function handler(req, res) {
   for (const monitor of monitors) {
     const { isUp, statusCode } = await checkUrl(monitor.url);
     const justWentDown = monitor.is_up && !isUp;
+    // Only counts as a "recovery" if it had actually been checked and found
+    // down before — otherwise every brand-new monitor's very first successful
+    // check would look like a "recovery" from the default is_up: true state.
+    const justRecovered = monitor.last_checked_at && !monitor.is_up && isUp;
 
     await supabase
       .from('monitors')
@@ -56,16 +60,25 @@ export default async function handler(req, res) {
       })
       .eq('id', monitor.id);
 
-    if (justWentDown) {
+    if (justWentDown || justRecovered) {
       const { data: authUser } = await supabase.auth.admin.getUserById(monitor.user_id);
       const email = authUser?.user?.email;
       if (email) {
-        await resend.emails.send({
-          from: process.env.ALERT_FROM_EMAIL,
-          to: email,
-          subject: `PulseCheck: ${monitor.name} appears to be down`,
-          text: `${monitor.name} (${monitor.url}) did not respond successfully during today's check.\n\nStatus code: ${statusCode ?? 'no response'}\n\nWe'll keep checking it daily. You'll only get another email like this one if it comes back up and then goes down again — not for every day it stays down. Check your dashboard anytime for its current status.`
-        });
+        if (justWentDown) {
+          await resend.emails.send({
+            from: process.env.ALERT_FROM_EMAIL,
+            to: email,
+            subject: `PulseCheck: ${monitor.name} appears to be down`,
+            text: `${monitor.name} (${monitor.url}) did not respond successfully during today's check.\n\nStatus code: ${statusCode ?? 'no response'}\n\nWe'll keep checking it daily. You'll only get another email like this one if it comes back up and then goes down again — not for every day it stays down. Check your dashboard anytime for its current status.`
+          });
+        } else {
+          await resend.emails.send({
+            from: process.env.ALERT_FROM_EMAIL,
+            to: email,
+            subject: `PulseCheck: ${monitor.name} is back up`,
+            text: `Good news — ${monitor.name} (${monitor.url}) responded successfully during today's check, after previously being down.\n\nStatus code: ${statusCode}`
+          });
+        }
       }
     }
 
