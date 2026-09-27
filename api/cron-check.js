@@ -64,7 +64,7 @@ export default async function handler(req, res) {
           from: process.env.ALERT_FROM_EMAIL,
           to: email,
           subject: `PulseCheck: ${monitor.name} appears to be down`,
-          text: `${monitor.name} (${monitor.url}) did not respond successfully during today's check.\n\nStatus code: ${statusCode ?? 'no response'}\n\nWe'll keep checking daily and let you know if it stays down.`
+          text: `${monitor.name} (${monitor.url}) did not respond successfully during today's check.\n\nStatus code: ${statusCode ?? 'no response'}\n\nWe'll keep checking it daily. You'll only get another email like this one if it comes back up and then goes down again — not for every day it stays down. Check your dashboard anytime for its current status.`
         });
       }
     }
