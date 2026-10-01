@@ -758,9 +758,22 @@
       // on load, check if already signed in before showing any view,
       // so we never flash the wrong screen while that check is in flight
       (async () => {
+        // Clicking a password-reset email link logs the person in AND lands them
+        // back here with type=recovery in the URL, in the same instant. If we
+        // only waited for the PASSWORD_RECOVERY event, our normal "already
+        // signed in → dashboard" check below can win that race and skip the
+        // reset screen entirely — which is exactly what happened. Checking the
+        // URL directly, synchronously, before anything async runs, avoids that.
+        const isRecoveryLink = window.location.hash.includes('type=recovery');
+
         const { data: { session } } = await supabase.auth.getSession();
         document.getElementById('loading-view').style.display = 'none';
-        if (session) {
+
+        if (isRecoveryLink) {
+          hideAllViews();
+          resetView.style.display = 'block';
+          history.replaceState(null, '', window.location.pathname);
+        } else if (session) {
           await loadDashboard();
         } else {
           authView.style.display = 'block';
