@@ -149,12 +149,6 @@
       filter: brightness(1.08);
     }
 
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid var(--line);
-      color: var(--text);
-    }
-
     .toggle-auth {
       text-align: center;
       margin-top: 14px;
@@ -318,7 +312,15 @@
       margin-top: 2px;
     }
 
-    .remove-btn {
+    .monitor-actions {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .remove-btn,
+    .checknow-btn {
       background: none;
       border: none;
       color: var(--text-dim);
@@ -328,6 +330,16 @@
 
     .remove-btn:hover {
       color: var(--down);
+    }
+
+    .checknow-btn:hover {
+      color: var(--accent);
+    }
+
+    .checknow-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+      color: var(--text-dim);
     }
 
     .empty {
@@ -516,12 +528,17 @@
           el.innerHTML = `
         <div class="status-dot ${statusClass}"></div>
         <div class="monitor-info">
-          <div class="name">${m.name}</div>
-          <div class="url">${m.url}</div>
+          <div class="name"></div>
+          <div class="url"></div>
           <div class="checked">${timeAgo(m.last_checked_at)}</div>
         </div>
-        <button class="remove-btn" data-id="${m.id}">Remove</button>
+        <div class="monitor-actions">
+          <button class="checknow-btn" data-id="${m.id}">Check now</button>
+          <button class="remove-btn" data-id="${m.id}">Remove</button>
+        </div>
       `;
+          el.querySelector('.name').textContent = m.name;
+          el.querySelector('.url').textContent = m.url;
           list.appendChild(el);
         });
 
@@ -529,6 +546,22 @@
           btn.addEventListener('click', async () => {
             await authedFetch(`/api/monitors?id=${btn.dataset.id}`, { method: 'DELETE' });
             await loadMonitors();
+          });
+        });
+
+        list.querySelectorAll('.checknow-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'Checking…';
+            try {
+              const res = await authedFetch(`/api/check-now?id=${btn.dataset.id}`, { method: 'POST' });
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'Could not check this monitor right now.');
+              }
+            } finally {
+              await loadMonitors();
+            }
           });
         });
       }
