@@ -371,6 +371,12 @@
       color: var(--text-dim);
     }
 
+    .schedule-note {
+      color: var(--text-dim);
+      font-size: 12px;
+      margin: 0 0 16px;
+    }
+
     .empty {
       color: var(--text-dim);
       font-size: 14px;
@@ -491,6 +497,8 @@
         <button type="submit">Add monitor</button>
       </form>
       <div class="msg error" id="add-error"></div>
+
+      <p class="schedule-note" id="schedule-note">Automatic checks run once daily, around 9:00 AM UTC.</p>
 
       <div class="monitor-list" id="monitor-list"></div>
       <div class="empty" id="empty-state" style="display:none;">No monitors yet — add your first URL above.</div>
@@ -633,6 +641,20 @@
         });
         return fetch(url, Object.assign({}, options, { headers }));
       }
+
+      // vercel.json schedules the daily check for "0 9 * * *" — 9:00 UTC.
+      // We compute today's occurrence of that moment and format it in the
+      // viewer's own timezone, so the note is useful without anyone having
+      // to do UTC math in their head. Vercel's Hobby plan doesn't guarantee
+      // the exact minute, so we're upfront about that too.
+      function updateScheduleNote() {
+        const now = new Date();
+        const todayAt9Utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0));
+        const localTime = todayAt9Utc.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+        document.getElementById('schedule-note').textContent =
+          `Automatic checks run once daily, around ${localTime} your time — it can land up to an hour later.`;
+      }
+      updateScheduleNote();
 
       function timeAgo(iso) {
         if (!iso) return 'not checked yet';
